@@ -1,0 +1,51 @@
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+token.json
+
+# Python cache & builds
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & metrics
+storage/logs/*
+!storage/logs/.gitkeep
+*.log
+
+# Local data, vectorial memories & SQLite
+storage/memory/*
+!storage/memory/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# agent sandbox
+workspace/*
+!workspace/.gitkeep
+
+# Sessions Playwright & navigators
+.playwright/
+test-results/
+playwright-report/
+
+# IDE and OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
