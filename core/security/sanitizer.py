@@ -3,12 +3,14 @@ from typing import Any, Union
 
 class DataSanitizer:
     # Patterns regex that needed to be sanitized in the data
+    SENSITIVE_KEY_NAMES = {"key", "secret", "token", "password", "auth", "pwd", "api_key"}
+
     PATTERNS = {
-        "JWT/Bearer Token": r"(?i)bearer\s+[a-zA-Z0-9_\-\.]+",
-        "Discord Token": r"[\w-]{24,26}\.[\w-]{6}\.[\w-]{27,38}",
-        "Generic Secret/Key": r"(?i)(key|secret|token|password|auth|pwd)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-\.]{8,})['\"]?",
-        "Windows Absolute Path": r"[A-Za-z]:\\(?:[^\\/:*?\"<>|\r\n]+\\)*[^\\/:*?\"<>|\r\n]*",
-        "Unix Home Path": r"/(?:home|Users)/[a-zA-Z0-9_\-]+(?:/[a-zA-Z0-9_\-\.]+)*",
+        "Bearer Token": (r"(?i)(bearer\s+)[a-zA-Z0-9_\-\.]+", r"\1[REDACTED]"),
+        "Discord Token": (r"[\w-]{24,26}\.[\w-]{6}\.[\w-]{27,38}", "[REDACTED]"),
+        "Generic Secret": (r"(?i)((?:key|secret|token|password|auth|pwd)\s*[:=]\s*['\"]?)([a-zA-Z0-9_\-\.]{8,})(['\"]?)", r"\1[REDACTED]\3"),
+        "Windows Path": (r"[A-Za-z]:\\(?:[^\\/:*?\"<>|\r\n]+\\)*[^\\/:*?\"<>|\r\n]*", "[REDACTED]"),
+        "Unix Home Path": (r"/(?:home|Users)/[a-zA-Z0-9_\-]+(?:/[a-zA-Z0-9_\-\.]+)*", "[REDACTED]"),
     }
 
     @classmethod
@@ -18,16 +20,8 @@ class DataSanitizer:
             return text
 
         sanitized = text
-        for label, pattern in cls.PATTERNS.items():
-            if "Secret/Key" in label:
-                # keep the key name but redact the value
-                sanitized = re.sub(
-                    pattern,
-                    r"\1=[REDACTED]",
-                    sanitized
-                )
-            else:
-                sanitized = re.sub(pattern, "[REDACTED]", sanitized)
+        for _, (pattern, replacement) in cls.PATTERNS.items():
+            sanitized = re.sub(pattern, replacement, sanitized)
         return sanitized
 
     @classmethod
@@ -36,7 +30,13 @@ class DataSanitizer:
         if isinstance(data, str):
             return cls.sanitize_text(data)
         elif isinstance(data, dict):
-            return {k: cls.sanitize_data(v) for k, v in data.items()}
+            cleaned_dict = {}
+            for k, v in data.items():
+                if any(sensitive in str(k).lower() for sensitive in cls.SENSITIVE_KEY_NAMES) and isinstance(v, str):
+                    cleaned_dict[k] = "[REDACTED]"
+                else:
+                    cleaned_dict[k] = cls.sanitize_data(v)
+            return cleaned_dict
         elif isinstance(data, list):
             return [cls.sanitize_data(item) for item in data]
         return data
